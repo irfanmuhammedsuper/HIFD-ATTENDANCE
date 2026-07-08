@@ -89,6 +89,24 @@
         .icon-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 50%; width: 38px; height: 38px; cursor: pointer; color: #fff; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; }
         .icon-btn:active { transform: scale(0.92); }
 
+        /* PWA Install Banner */
+        .install-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card-bg);
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            gap: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            z-index: 5;
+            animation: slideDown 0.4s ease forwards;
+        }
+        @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .install-banner .ib-text { flex: 1; display: flex; flex-direction: column; }
+        .install-banner .ib-text strong { font-size: 0.85rem; font-family: var(--font-display); color: var(--text); }
+        .install-banner .ib-text span { font-size: 0.7rem; color: var(--text-muted); }
+
         main { 
             flex: 1; 
             overflow-y: auto; 
@@ -284,9 +302,6 @@
         .field-row { display:flex; gap:10px; }
         .field-row > div { flex:1; }
 
-        /* ========================================================
-           Desktop & Tablet Responsive Layout Modifications 
-           ======================================================== */
         @media (min-width: 768px) {
             body { 
                 display: flex; 
@@ -359,7 +374,6 @@
     </style>
 </head>
 <body>
-<!-- Backdrop Blur Screen Overlay for Mobile Navigation Menu -->
 <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
 
 <div class="app-shell">
@@ -378,6 +392,15 @@
             <button class="icon-btn" id="menuBtn" onclick="toggleMenu()" aria-label="Open navigation menu">☰</button>
         </div>
     </header>
+
+    <div id="installBanner" class="install-banner" style="display:none;">
+        <div class="ib-text">
+            <strong>Install App</strong>
+            <span>Add to home screen for offline use</span>
+        </div>
+        <button id="installBtn" class="btn btn-outline" style="padding: 6px 14px; width: auto; font-size: 0.75rem;">Install</button>
+        <button id="closeInstallBtn" style="background:none;border:none;color:var(--text-muted);font-size:1.4rem;padding:0 8px;">&times;</button>
+    </div>
 
     <main id="mainScroll">
         <div class="network-bar">
@@ -491,6 +514,60 @@
 </div>
 
 <script>
+    // --- Progressive Web App (PWA) Implementation ---
+    // Injecting a simple Service Worker dynamically to satisfy browser PWA requirements
+    const swCode = `
+    self.addEventListener('install', (e) => { self.skipWaiting(); });
+    self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
+    self.addEventListener('fetch', (e) => {
+        // Minimal fetch listener to satisfy PWA installability check
+        e.respondWith(fetch(e.request).catch(() => new Response('Offline mode active.')));
+    });
+    `;
+    const swBlob = new Blob([swCode], {type: 'application/javascript'});
+    const swUrl = URL.createObjectURL(swBlob);
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register(swUrl)
+            .then(reg => console.log('Service Worker registered for PWA support.'))
+            .catch(err => console.error('Service Worker registration failed:', err));
+    }
+
+    let deferredPrompt;
+    const installBanner = document.getElementById('installBanner');
+    const installBtn = document.getElementById('installBtn');
+    const closeInstallBtn = document.getElementById('closeInstallBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent the mini-infobar from appearing on mobile
+        e.preventDefault();
+        // Stash the event so it can be triggered later
+        deferredPrompt = e;
+        // Update UI notify the user they can install the PWA
+        installBanner.style.display = 'flex';
+    });
+
+    installBtn.addEventListener('click', async () => {
+        installBanner.style.display = 'none';
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            deferredPrompt = null;
+        }
+    });
+
+    closeInstallBtn.addEventListener('click', () => {
+        installBanner.style.display = 'none';
+    });
+
+    window.addEventListener('appinstalled', () => {
+        installBanner.style.display = 'none';
+        deferredPrompt = null;
+        showToast('App installed successfully!', 'success');
+    });
+    // --- End PWA Implementation ---
+
     const API_URL = 'https://script.google.com/macros/s/AKfycbwylyIgCbCo9F4l3hSpTql__VESl-Q8qYrsCkUqaETzbmEMBX6_5JSJiMi3nT2ruestcg/exec';
     const ADMIN_PIN = '8899';
     const QUEUE_KEY = 'attendance_offline_queue';
@@ -564,7 +641,6 @@
         UI.main.scrollTop = 0;
         if (tab==='history') renderHistory();
         
-        // Auto-collapse sidebar view panel menu list on mobile execution selection
         if (window.innerWidth < 768) {
             closeMenu();
         }
