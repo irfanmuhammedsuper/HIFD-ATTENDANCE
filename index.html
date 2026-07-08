@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Ansar Tuition · Attendance</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#12213F">
+    <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiQXR0ZW5kYW5jZSBQcm8iLCJzaG9ydF9uYW1lIjoiQXR0ZW5kYW5jZSIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjRjhGQUZDIiwidGhlbWVfY29sb3IiOiIjMDA4OTdCIiwiaWNvbnMiOlt7InNyYyI6Imh0dHBzOi8vaS5wb3N0aW1nLmNjL0w1MTdicTFWL2Fuc2FyLWxvZ28ucG5nIiwic2l6ZXMiOiIxOTJ4MTkyIiwidHlwZSI6ImltYWdlL3BuZyJ9XX0=">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --ink: #12213F;
+            --ink-2: #1B2E52;
+            --stamp: #D64550;
+            --stamp-glow: rgba(214, 69, 80, 0.14);
+            --success: #2BA84A;
+            --amber: #F4A100;
+            --bg: #F4F3EE;
+            --card-bg: #ffffff;
+            --text: #12213F;
+            --text-muted: #6B7280;
+            --border: #E6E2D6;
+            --input-bg: #FBFAF7;
+            --nav-bg: rgba(255,255,255,0.82);
+            --shadow: 0 14px 32px -10px rgba(18,33,63,0.10);
+            --radius-xl: 26px;
+            --radius-md: 16px;
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+        [data-theme="dark"] {
+            --ink: #ECEFF4;
+            --bg: #0B1526;
+            --card-bg: #142238;
+            --text: #ECEFF4;
+            --text-muted: #8B97AC;
+            --border: #223353;
+            --input-bg: #0E1B30;
+            --nav-bg: rgba(20,34,56,0.82);
+            --shadow: 0 14px 32px -10px rgba(0,0,0,0.5);
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        *, *::before, *::after { transition: background 0.25s, color 0.25s, border-color 0.2s; }
+        html, body { height: 100%; margin: 0; font-family: var(--font-body); background: var(--bg); color: var(--text); overscroll-behavior-y: none; overflow: hidden; }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }
+
+        .app-shell { display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: 560px; margin: 0 auto; background: var(--bg); position: relative; box-shadow: 0 20px 44px -14px rgba(0,0,0,0.10); }
+
+        #ptr { text-align: center; height: 0; overflow: hidden; transition: height 0.3s ease; background: var(--bg); display: flex; align-items: center; justify-content: center; color: var(--ink-2); font-weight: 600; font-size: 0.82rem; gap: 8px; }
+        [data-theme="dark"] #ptr { color: var(--text); }
+        .ptr-spinner { width: 18px; height: 18px; border: 2.5px solid var(--stamp); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ---------- Header: ID badge strip ---------- */
+        header { flex-shrink: 0; padding: 18px 18px 14px; background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: space-between; z-index: 10; position: relative; overflow: hidden; }
+        [data-theme="dark"] header { background: #0E1B30; }
+        header::after { content:''; position:absolute; right:-40px; top:-40px; width:140px; height:140px; border-radius:50%; background: radial-gradient(circle, var(--stamp-glow), transparent 70%); pointer-events:none; }
+        .brand { display: flex; align-items: center; gap: 12px; z-index:1; }
+        .logo-img { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; background: #fff; border: 2px solid rgba(255,255,255,0.25); }
+        .brand-text h1 { font-family: var(--font-display); font-size: 1.02rem; font-weight: 700; letter-spacing: -0.01em; margin: 0; line-height: 1.25; color: #fff; }
+        .brand-text .sub { font-family: var(--font-mono); font-size: 0.62rem; font-weight: 600; color: var(--amber); text-transform: uppercase; letter-spacing: 0.08em; }
+        .header-right { display:flex; align-items:center; gap:10px; z-index:1; }
+        .live-clock { font-family: var(--font-mono); font-size: 0.78rem; color: rgba(255,255,255,0.85); text-align:right; line-height:1.15; }
+        .live-clock .d { font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.06em; }
+        .icon-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 50%; width: 38px; height: 38px; cursor: pointer; color: #fff; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; }
+        .icon-btn:active { transform: scale(0.92); }
+
+        main { flex: 1; overflow-y: auto; padding: 16px 16px 104px; -webkit-overflow-scrolling: touch; }
+
+        .view { display: none; opacity: 0; }
+        .view.active { display: block; animation: fadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } from { opacity:0; transform: translateY(8px);} }
+
+        .glass-card { background: var(--card-bg); border-radius: var(--radius-xl); padding: 22px 20px; border: 1px solid var(--border); margin-bottom: 16px; box-shadow: var(--shadow); }
+
+        /* ---------- network pill ---------- */
+        .network-bar { text-align: center; margin-bottom: 14px; }
+        .status-pill { display: inline-flex; align-items: center; gap: 8px; background: var(--card-bg); padding: 6px 16px 6px 12px; border-radius: 100px; border: 1px solid var(--border); font-family: var(--font-mono); font-size: 0.65rem; font-weight: 600; color: var(--text-muted); box-shadow: var(--shadow); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .dot-online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .dot-offline { background: var(--stamp); box-shadow: 0 0 8px var(--stamp); }
+        .dot-sync { background: var(--amber); animation: pulse 1s infinite alternate; }
+        @keyframes pulse { to { opacity: 0.35; } }
+        .queue-badge { margin-left:6px; background: var(--amber); color:#12213F; border-radius:100px; padding:1px 8px; font-weight:700; }
+
+        /* ---------- Record view: punch dial ---------- */
+        .punch-wrap { display:flex; flex-direction:column; align-items:center; padding: 6px 0 4px; }
+        .punch-dial { position:relative; width:186px; height:186px; border-radius:50%; margin-bottom:18px; }
+        .punch-ring { position:absolute; inset:0; border-radius:50%; border: 1.5px dashed var(--border); }
+        .punch-btn { position:absolute; inset:14px; border-radius:50%; border:none; cursor:pointer; background: linear-gradient(155deg, var(--ink), var(--ink-2)); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; box-shadow: 0 14px 30px -8px var(--stamp-glow), inset 0 1px 0 rgba(255,255,255,0.12); font-family: var(--font-display); }
+        .punch-btn:active { transform: scale(0.94); }
+        .punch-btn:disabled { opacity:0.45; cursor:not-allowed; }
+        .punch-btn .p-icon { font-size: 1.7rem; }
+        .punch-btn .p-label { font-size: 0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+        .punch-btn .p-time { font-family: var(--font-mono); font-size: 0.62rem; color: rgba(255,255,255,0.55); margin-top:2px; }
+        .stamp-burst { position:absolute; inset:14px; border-radius:50%; border:3px solid var(--stamp); opacity:0; pointer-events:none; }
+        .stamp-burst.go { animation: burst 0.6s ease-out forwards; }
+        @keyframes burst { 0%{ opacity:0.9; transform:scale(0.8);} 100%{ opacity:0; transform:scale(1.5);} }
+
+        .selected-chip { display:flex; align-items:center; gap:10px; background: var(--input-bg); border:1px solid var(--border); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom:14px; min-height: 20px; }
+        .selected-chip .sc-empty { color: var(--text-muted); font-size:0.82rem; }
+        .selected-chip .avatar { width:30px; height:30px; font-size:0.75rem; flex-shrink:0; }
+        .selected-chip .sc-name { font-weight:700; font-size:0.86rem; }
+        .selected-chip .sc-sub { font-size:0.68rem; color:var(--text-muted); }
+
+        .quick-chips { display:flex; gap:8px; overflow-x:auto; padding: 2px 2px 12px; scrollbar-width:none; }
+        .quick-chips::-webkit-scrollbar{display:none;}
+        .quick-chip { flex-shrink:0; background: var(--input-bg); border:1px solid var(--border); border-radius:100px; padding:7px 14px; font-size:0.75rem; font-weight:600; color:var(--text); cursor:pointer; white-space:nowrap; }
+        .quick-chip:active { transform: scale(0.96); }
+        .quick-chip.on { background: var(--ink); color:#fff; border-color: var(--ink); }
+
+        label { display: block; margin-bottom: 6px; font-weight: 700; font-size: 0.66rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--font-mono); }
+        input, select { width: 100%; padding: 13px 15px; border-radius: var(--radius-md); border: 1.5px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 0.92rem; font-weight: 500; outline: none; font-family: var(--font-body); }
+        input:focus, select:focus { border-color: var(--ink-2); background: var(--card-bg); }
+
+        .btn { width: 100%; padding: 15px; border-radius: var(--radius-md); border: none; background: var(--ink); color: white; font-size: 0.9rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font-display); }
+        .btn:active { transform: scale(0.97); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-danger { background: var(--stamp); }
+        .btn-outline { background: transparent; color: var(--text); border: 1.5px solid var(--border); }
+        .btn-outline:active { background: var(--input-bg); }
+        .btn-ghost { background: var(--input-bg); color: var(--text); border: 1px solid var(--border); }
+        .btn-row { display:flex; gap:10px; }
+        .btn-row .btn { flex:1; }
+
+        /* ---------- stat cards ---------- */
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+        .stat-card { background: var(--card-bg); padding: 14px 8px; border-radius: var(--radius-md); border: 1px solid var(--border); text-align: center; box-shadow: var(--shadow); }
+        .stat-value { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+        [data-theme="dark"] .stat-value { color: #fff; }
+        .stat-label { font-size: 0.58rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 3px; letter-spacing:0.04em; }
+
+        /* ---------- weekly chart ---------- */
+        .chart-card { padding: 18px 18px 8px; }
+        .chart-title { font-family: var(--font-display); font-weight:700; font-size:0.85rem; margin-bottom:12px; }
+        .bar-chart { display:flex; align-items:flex-end; gap:8px; height:80px; }
+        .bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end; }
+        .bar-fill { width:100%; max-width:26px; border-radius:6px 6px 3px 3px; background: linear-gradient(180deg, var(--stamp), var(--ink-2)); min-height:4px; }
+        .bar-day { font-family: var(--font-mono); font-size:0.6rem; color:var(--text-muted); }
+
+        /* ---------- search + filter row ---------- */
+        .search-row { display:flex; gap:8px; margin-bottom:14px; }
+        .search-row input { flex:1; }
+        .filter-select { max-width:120px; }
+
+        .list-header { display: flex; align-items: center; margin: 18px 0 10px; }
+        .list-header span { font-family: var(--font-mono); font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+        .list-header div { flex: 1; height: 1px; background: var(--border); margin-left: 12px; }
+
+        .date-group-label { font-family: var(--font-mono); font-size: 0.65rem; font-weight:700; color: var(--stamp); text-transform:uppercase; letter-spacing:0.06em; margin: 16px 0 8px 4px; }
+
+        #history-list { list-style: none; padding: 0; margin: 0; }
+        .log-item { background: var(--card-bg); padding: 13px 15px; border-radius: var(--radius-md); margin-bottom: 9px; border: 1px solid var(--border); display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow); }
+        .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; color:#fff; flex-shrink:0; }
+        .log-info { flex: 1; min-width:0; }
+        .log-name { font-weight: 700; font-size: 0.88rem; }
+        .log-sub { font-size: 0.7rem; color: var(--text-muted); }
+        .log-time { font-family: var(--font-mono); background: var(--input-bg); padding: 4px 10px; border-radius: 8px; font-weight: 600; font-size: 0.62rem; border: 1px solid var(--border); flex-shrink:0; }
+        .empty-state { text-align:center; padding:38px 16px; color:var(--text-muted); }
+        .empty-state .e-icon { font-size:1.8rem; margin-bottom:8px; }
+        .empty-state .e-title { font-weight:700; font-size:0.85rem; color:var(--text); font-family: var(--font-display); }
+        .empty-state .e-sub { font-size:0.72rem; margin-top:4px; }
+
+        /* ---------- bottom nav ---------- */
+        .bottom-nav { position: absolute; bottom: 14px; left: 16px; right: 16px; background: var(--nav-bg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--border); border-radius: 34px; display: flex; justify-content: space-around; padding: 6px 8px; z-index: 100; box-shadow: 0 10px 26px -8px rgba(0,0,0,0.10); }
+        .nav-item { flex: 1; text-align: center; background: none; border: none; padding: 8px 4px; color: var(--text-muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; border-radius: 26px; }
+        .nav-item span { font-family: var(--font-mono); font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .nav-item.active { color: var(--stamp); background: var(--stamp-glow); }
+        .nav-item:focus-visible, .icon-btn:focus-visible, .btn:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--stamp); outline-offset: 2px; }
+        .nav-icon { font-size: 1.25rem; }
+
+        #toast { margin-top: 12px; padding: 12px 15px; border-radius: var(--radius-md); font-size: 0.82rem; font-weight: 600; display: none; border: 1px solid transparent; align-items:center; gap:8px; }
+        .toast-success { background: rgba(43,168,74,0.09); color: var(--success); border-color: var(--success); }
+        .toast-error { background: rgba(214,69,80,0.09); color: var(--stamp); border-color: var(--stamp); }
+        .toast-info { background: rgba(244,161,0,0.10); color:#946200; border-color: var(--amber); }
+        [data-theme="dark"] .toast-info { color: var(--amber); }
+
+        .vault-card { text-align:center; }
+        .vault-icon { width:56px; height:56px; border-radius:50%; background: var(--ink); color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.4rem; margin:0 auto 10px; }
+        #adminPin { text-align:center; letter-spacing:8px; font-size:1.3rem; max-width:170px; margin:0 auto; font-family: var(--font-mono); }
+        .admin-hello { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+        .admin-hello h3 { font-family: var(--font-display); margin:0; font-size:1rem; }
+        .link-btn { background:none; border:none; color: var(--text-muted); font-size:0.72rem; font-weight:600; cursor:pointer; text-decoration:underline; }
+        .field-row { display:flex; gap:10px; }
+        .field-row > div { flex:1; }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <div id="ptr"><div class="ptr-spinner"></div><span>Syncing cloud…</span></div>
+    <header>
+        <div class="brand">
+            <img src="https://i.postimg.cc/L517bq1V/ansar-logo.png" class="logo-img" alt="logo" crossorigin="anonymous">
+            <div class="brand-text">
+                <h1>Ansar Tuition</h1>
+                <div class="sub">Attendance Register</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="live-clock"><div id="clockTime">--:--:--</div><div class="d" id="clockDate">---</div></div>
+            <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" aria-label="Toggle theme">🌙</button>
+        </div>
+    </header>
+
+    <main id="mainScroll">
+        <div class="network-bar">
+            <div class="status-pill">
+                <div class="dot dot-sync" id="networkDot"></div>
+                <span id="networkText">CONNECTING</span>
+                <span class="queue-badge" id="queueBadge" style="display:none;"></span>
+            </div>
+        </div>
+
+        <section id="view-record" class="view active">
+            <div class="glass-card">
+                <label>Find a teacher</label>
+                <input type="text" id="teacherInput" list="teacherDataList" placeholder="Loading register…" disabled autocomplete="off">
+                <datalist id="teacherDataList"></datalist>
+
+                <div id="quickChips" class="quick-chips" style="display:none;"></div>
+
+                <div class="selected-chip" id="selectedChip"><span class="sc-empty">No teacher selected yet</span></div>
+
+                <div class="punch-wrap">
+                    <div class="punch-dial">
+                        <div class="punch-ring"></div>
+                        <div class="stamp-burst" id="stampBurst"></div>
+                        <button class="punch-btn" id="recordBtn" onclick="record()" disabled aria-label="Punch attendance">
+                            <span class="p-icon">🖋️</span>
+                            <span class="p-label">Punch In</span>
+                            <span class="p-time" id="punchBtnTime">--:--</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="toast"></div>
+            </div>
+        </section>
+
+        <section id="view-history" class="view">
+            <div class="stat-grid">
+                <div class="stat-card"><div class="stat-value" id="statToday">0</div><div class="stat-label">Today</div></div>
+                <div class="stat-card"><div class="stat-value" id="statWeek">0</div><div class="stat-label">This week</div></div>
+                <div class="stat-card"><div class="stat-value" id="statTotal">0</div><div class="stat-label">All logs</div></div>
+            </div>
+
+            <div class="glass-card chart-card" id="chartCard" style="display:none;">
+                <div class="chart-title">Last 7 days</div>
+                <div class="bar-chart" id="barChart"></div>
+            </div>
+
+            <div class="search-row">
+                <input type="text" id="historySearch" placeholder="Search name or subject…" oninput="renderHistory()">
+                <select id="historyFilter" class="filter-select" onchange="renderHistory()"><option value="ALL">All</option></select>
+            </div>
+
+            <div class="list-header"><span>Activity Stream</span><div></div></div>
+            <ul id="history-list"></ul>
+        </section>
+
+        <section id="view-admin" class="view">
+            <div id="adminLogin" class="glass-card vault-card">
+                <div class="vault-icon">🔐</div>
+                <h3 style="font-family:var(--font-display);margin:0 0 4px;">Access Panel</h3>
+                <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:16px;">Enter your security PIN</p>
+                <input type="password" id="adminPin" placeholder="••••" inputmode="numeric">
+                <button class="btn" onclick="verifyAdmin()" style="margin-top:14px;">Unlock</button>
+            </div>
+
+            <div id="adminDashboard" style="display:none;">
+                <div class="glass-card">
+                    <div class="admin-hello">
+                        <h3>Admin dashboard</h3>
+                        <button class="link-btn" onclick="lockAdmin()">Lock</button>
+                    </div>
+                    <div class="stat-grid" style="margin-bottom:6px;">
+                        <div class="stat-card"><div class="stat-value" id="admMostActive" style="font-size:1rem;">–</div><div class="stat-label">Top teacher</div></div>
+                        <div class="stat-card"><div class="stat-value" id="admProfiles">0</div><div class="stat-label">Profiles</div></div>
+                        <div class="stat-card"><div class="stat-value" id="admToday">0</div><div class="stat-label">Today</div></div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <h4 style="margin:0 0 12px;font-family:var(--font-display);">Export report</h4>
+                    <label>Filter by teacher</label>
+                    <select id="pdfFilterSelect" style="margin-bottom:12px;"><option value="ALL">All profiles</option></select>
+                    <div class="field-row" style="margin-bottom:14px;">
+                        <div><label>From</label><input type="date" id="dateFrom"></div>
+                        <div><label>To</label><input type="date" id="dateTo"></div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn btn-outline" onclick="generateModernPDF()">⬇ PDF</button>
+                        <button class="btn btn-ghost" onclick="exportCSV()">⬇ CSV</button>
+                    </div>
+                </div>
+
+                <div class="glass-card" style="border-color:rgba(214,69,80,0.2);">
+                    <h4 style="margin:0 0 6px;font-family:var(--font-display);color:var(--stamp);">Danger zone</h4>
+                    <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:14px;">Permanently erase all server logs. This cannot be undone.</p>
+                    <button class="btn btn-danger" onclick="clearDatabase()">✕ Purge database</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <button class="nav-item active" id="nav-record" onclick="switchTab('record')"><div class="nav-icon">🖋️</div><span>Record</span></button>
+        <button class="nav-item" id="nav-history" onclick="switchTab('history')"><div class="nav-icon">📖</div><span>Ledger</span></button>
+        <button class="nav-item" id="nav-admin" onclick="switchTab('admin')"><div class="nav-icon">⚙️</div><span>Admin</span></button>
+    </nav>
+</div>
+
+<script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbwylyIgCbCo9F4l3hSpTql__VESl-Q8qYrsCkUqaETzbmEMBX6_5JSJiMi3nT2ruestcg/exec';
+    const ADMIN_PIN = '8899';
+    const QUEUE_KEY = 'attendance_offline_queue';
+    const AVATAR_PALETTE = ['#D64550','#12213F','#2BA84A','#F4A100','#5C6BC0','#8D6E63','#26A69A','#7E57C2'];
+
+    const UI = {
+        input: document.getElementById('teacherInput'),
+        datalist: document.getElementById('teacherDataList'),
+        btn: document.getElementById('recordBtn'),
+        toast: document.getElementById('toast'),
+        historyList: document.getElementById('history-list'),
+        netDot: document.getElementById('networkDot'),
+        netText: document.getElementById('networkText'),
+        queueBadge: document.getElementById('queueBadge'),
+        main: document.getElementById('mainScroll'),
+        ptr: document.getElementById('ptr'),
+        filterSelect: document.getElementById('pdfFilterSelect'),
+        historyFilter: document.getElementById('historyFilter'),
+        historySearch: document.getElementById('historySearch'),
+        adminPin: document.getElementById('adminPin'),
+        adminLogin: document.getElementById('adminLogin'),
+        adminDash: document.getElementById('adminDashboard'),
+        selectedChip: document.getElementById('selectedChip'),
+        quickChips: document.getElementById('quickChips'),
+        stampBurst: document.getElementById('stampBurst'),
+        punchBtnTime: document.getElementById('punchBtnTime'),
+        chartCard: document.getElementById('chartCard'),
+        barChart: document.getElementById('barChart')
+    };
+
+    let serverHistory = [];
+    let teacherList = [];
+    let selectedTeacher = null;
+
+    const Haptics = { tap: ()=>navigator.vibrate?.(10), success: ()=>navigator.vibrate?.([30,30,60]), error: ()=>navigator.vibrate?.([50,50,50]) };
+
+    /* ---------------- utility ---------------- */
+    function hashColor(str) {
+        let h = 0; for (let i=0;i<(str||'').length;i++) h = str.charCodeAt(i) + ((h<<5)-h);
+        return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
+    }
+    function tryParseDate(s) {
+        if (!s) return null;
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? null : d;
+    }
+    function isSameDay(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+    function startOfWeek(d){ const c = new Date(d); const day = c.getDay(); c.setDate(c.getDate()-day); c.setHours(0,0,0,0); return c; }
+    function dateGroupLabel(d) {
+        const now = new Date();
+        if (isSameDay(d, now)) return 'Today';
+        const y = new Date(now); y.setDate(now.getDate()-1);
+        if (isSameDay(d, y)) return 'Yesterday';
+        return d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
+    }
+
+    /* ---------------- nav ---------------- */
+    function switchTab(tab) {
+        Haptics.tap();
+        document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+        document.getElementById(`nav-${tab}`).classList.add('active');
+        document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+        document.getElementById(`view-${tab}`).classList.add('active');
+        UI.main.scrollTop = 0;
+        if (tab==='history') renderHistory();
+    }
+
+    /* ---------------- pull to refresh ---------------- */
+    let startY = 0;
+    UI.main.addEventListener('touchstart', e=>{startY=e.touches[0].clientY;}, {passive:true});
+    UI.main.addEventListener('touchmove', e=>{
+        if (UI.main.scrollTop===0 && e.touches[0].clientY-startY>60) UI.ptr.style.height='50px';
+    }, {passive:true});
+    UI.main.addEventListener('touchend', ()=>{
+        if (UI.ptr.style.height==='50px') { Haptics.tap(); fetchLiveData().then(()=>setTimeout(()=>UI.ptr.style.height='0',400)); }
+    });
+
+    /* ---------------- clock ---------------- */
+    function tickClock() {
+        const now = new Date();
+        document.getElementById('clockTime').textContent = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+        document.getElementById('clockDate').textContent = now.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
+        UI.punchBtnTime.textContent = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    }
+    setInterval(tickClock, 1000); tickClock();
+
+    /* ---------------- offline queue ---------------- */
+    function getQueue(){ try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch { return []; } }
+    function setQueue(q){ localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); updateQueueBadge(); }
+    function updateQueueBadge() {
+        const n = getQueue().length;
+        UI.queueBadge.style.display = n ? 'inline' : 'none';
+        UI.queueBadge.textContent = n ? `${n} queued` : '';
+    }
+    async function flushQueue() {
+        let q = getQueue();
+        if (!q.length || !navigator.onLine) return;
+        const remaining = [];
+        for (const item of q) {
+            try {
+                const res = await fetchAPI('recordAttendance', item);
+                if (!res.success) remaining.push(item);
+            } catch { remaining.push(item); }
+        }
+        setQueue(remaining);
+        if (remaining.length < q.length) { showToast('Queued logs synced', 'success'); await fetchLiveData(); }
+    }
+    window.addEventListener('online', async ()=>{ await fetchLiveData(); await flushQueue(); });
+
+    /* ---------------- API ---------------- */
+    async function fetchAPI(action, payload={}) {
+        const r = await fetch(API_URL, { method:'POST', body:JSON.stringify({action,payload}), headers:{'Content-Type':'text/plain;charset=utf-8'} });
+        return r.json();
+    }
+
+    async function fetchLiveData() {
+        try {
+            UI.netDot.className = 'dot dot-sync';
+            UI.netText.textContent = 'SYNCING';
+            const [teachers, history] = await Promise.all([fetchAPI('getTeachers'), fetchAPI('getHistory')]);
+            teacherList = teachers;
+            serverHistory = history;
+
+            UI.datalist.innerHTML = '';
+            UI.filterSelect.innerHTML = '<option value="ALL">All profiles</option>';
+            UI.historyFilter.innerHTML = '<option value="ALL">All</option>';
+            teachers.forEach(t=>{
+                const token = `${t.name} | ${t.subject}`;
+                const opt = document.createElement('option'); opt.value = token; UI.datalist.appendChild(opt);
+                const opt2 = document.createElement('option'); opt2.value = token; opt2.textContent = token; UI.filterSelect.appendChild(opt2);
+                const opt3 = document.createElement('option'); opt3.value = token; opt3.textContent = token; UI.historyFilter.appendChild(opt3);
+            });
+            UI.input.disabled = teachers.length===0;
+            UI.input.placeholder = teachers.length ? 'Type a name or subject…' : 'No profiles found';
+            updatePunchState();
+            buildQuickChips();
+            renderHistory();
+            renderStats();
+            renderAdminStats();
+
+            UI.netDot.className = 'dot dot-online';
+            UI.netText.textContent = 'ONLINE';
+        } catch(e) { setOffline(); }
+    }
+
+    function setOffline() {
+        UI.netDot.className = 'dot dot-offline';
+        UI.netText.textContent = 'OFFLINE';
+        updatePunchState();
+        UI.input.placeholder = 'No connection';
+    }
+
+    /* ---------------- record view ---------------- */
+    function buildQuickChips() {
+        const recent = [];
+        for (const row of serverHistory) {
+            const key = `${row[1]}|${row[2]}`;
+            if (!recent.includes(key)) recent.push(key);
+            if (recent.length>=6) break;
+        }
+        if (!recent.length) { UI.quickChips.style.display='none'; return; }
+        UI.quickChips.style.display='flex';
+        UI.quickChips.innerHTML = '';
+        recent.forEach(key=>{
+            const [name, subject] = key.split('|');
+            const chip = document.createElement('button');
+            chip.className = 'quick-chip';
+            chip.textContent = name;
+            chip.onclick = ()=>selectTeacher(name, subject);
+            UI.quickChips.appendChild(chip);
+        });
+    }
+
+    function selectTeacher(name, subject) {
+        Haptics.tap();
+        selectedTeacher = { name, subject };
+        UI.input.value = `${name} | ${subject}`;
+        renderSelectedChip();
+        document.querySelectorAll('.quick-chip').forEach(c=>c.classList.toggle('on', c.textContent===name));
+        updatePunchState();
+    }
+
+    function renderSelectedChip() {
+        if (!selectedTeacher) { UI.selectedChip.innerHTML = '<span class="sc-empty">No teacher selected yet</span>'; return; }
+        UI.selectedChip.innerHTML = `
+            <div class="avatar" style="background:${hashColor(selectedTeacher.name)}">${selectedTeacher.name.charAt(0).toUpperCase()}</div>
+            <div><div class="sc-name">${selectedTeacher.name}</div><div class="sc-sub">${selectedTeacher.subject}</div></div>
+        `;
+    }
+
+    UI.input.addEventListener('input', ()=>{
+        const val = UI.input.value.trim();
+        const match = [...UI.datalist.options].find(o=>o.value===val);
+        if (match) { const [n,s] = val.split('|'); selectedTeacher = { name:n.trim(), subject:(s||'').trim() }; }
+        else selectedTeacher = null;
+        renderSelectedChip();
+        updatePunchState();
+    });
+
+    function updatePunchState() {
+        UI.btn.disabled = !selectedTeacher || (!navigator.onLine && !teacherList.length);
+    }
+
+    async function record() {
+        Haptics.tap();
+        if (!selectedTeacher) return showToast('Select a profile first', 'error');
+
+        UI.stampBurst.classList.remove('go'); void UI.stampBurst.offsetWidth; UI.stampBurst.classList.add('go');
+        UI.btn.disabled = true;
+        const payload = { teacherName: selectedTeacher.name, subject: selectedTeacher.subject };
+
+        if (!navigator.onLine) {
+            const q = getQueue(); q.push(payload); setQueue(q);
+            Haptics.tap();
+            showToast('Offline — log queued, will sync automatically', 'info');
+            UI.input.value=''; selectedTeacher=null; renderSelectedChip();
+            UI.btn.disabled = false;
+            return;
+        }
+
+        try {
+            const res = await fetchAPI('recordAttendance', payload);
+            if (res.success) {
+                Haptics.success(); triggerConfetti(); showToast(res.message,'success');
+                UI.input.value=''; selectedTeacher=null; renderSelectedChip();
+                await fetchLiveData();
+            } else { Haptics.error(); showToast(res.message,'error'); }
+        } catch {
+            const q = getQueue(); q.push(payload); setQueue(q);
+            Haptics.error(); showToast('Network error — queued for later sync', 'info');
+        }
+        UI.btn.disabled = false;
+    }
+
+    /* ---------------- history / ledger ---------------- */
+    function renderStats() {
+        const now = new Date(); const weekStart = startOfWeek(now);
+        let today=0, week=0;
+        serverHistory.forEach(r=>{
+            const d = tryParseDate(r[0]);
+            if (!d) return;
+            if (isSameDay(d, now)) today++;
+            if (d >= weekStart) week++;
+        });
+        document.getElementById('statToday').textContent = today;
+        document.getElementById('statWeek').textContent = week;
+        document.getElementById('statTotal').textContent = serverHistory.length;
+        renderBarChart();
+    }
+
+    function renderBarChart() {
+        const days = [];
+        for (let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0); days.push(d); }
+        const counts = days.map(d=>0);
+        let anyParsed = false;
+        serverHistory.forEach(r=>{
+            const d = tryParseDate(r[0]);
+            if (!d) return;
+            anyParsed = true;
+            days.forEach((day,i)=>{ if (isSameDay(d, day)) counts[i]++; });
+        });
+        if (!anyParsed) { UI.chartCard.style.display='none'; return; }
+        UI.chartCard.style.display='block';
+        const max = Math.max(...counts, 1);
+        UI.barChart.innerHTML = days.map((d,i)=>`
+            <div class="bar-col">
+                <div class="bar-fill" style="height:${Math.max(6,(counts[i]/max)*100)}%"></div>
+                <div class="bar-day">${d.toLocaleDateString(undefined,{weekday:'narrow'})}</div>
+            </div>`).join('');
+    }
+
+    function renderHistory() {
+        const search = (UI.historySearch.value||'').toLowerCase();
+        const filter = UI.historyFilter.value;
+        let rows = serverHistory.filter(r=>{
+            const name = (r[1]||'').toLowerCase(), subj=(r[2]||'').toLowerCase();
+            const matchesSearch = !search || name.includes(search) || subj.includes(search);
+            let matchesFilter = true;
+            if (filter!=='ALL') {
+                const [fn, fs] = filter.split('|').map(s=>s.trim().toLowerCase());
+                matchesFilter = name===fn && subj===fs;
+            }
+            return matchesSearch && matchesFilter;
+        });
+
+        if (!rows.length) {
+            UI.historyList.innerHTML = `<li class="empty-state"><div class="e-icon">📭</div><div class="e-title">No matching logs</div><div class="e-sub">Try a different search or filter</div></li>`;
+            return;
+        }
+
+        UI.historyList.innerHTML = '';
+        let lastLabel = null;
+        rows.forEach(r=>{
+            const d = tryParseDate(r[0]);
+            const label = d ? dateGroupLabel(d) : null;
+            if (label && label!==lastLabel) {
+                const h = document.createElement('div'); h.className='date-group-label'; h.textContent = label;
+                UI.historyList.appendChild(h); lastLabel = label;
+            }
+            const li = document.createElement('li');
+            li.className = 'log-item';
+            const timeLabel = d ? d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : r[0];
+            li.innerHTML = `
+                <div class="avatar" style="background:${hashColor(r[1])}">${(r[1]||'?').charAt(0).toUpperCase()}</div>
+                <div class="log-info"><div class="log-name">${r[1]}</div><div class="log-sub">${r[2]}</div></div>
+                <div class="log-time">${timeLabel}</div>
+            `;
+            UI.historyList.appendChild(li);
+        });
+    }
+
+    /* ---------------- admin ---------------- */
+    function verifyAdmin() {
+        if (UI.adminPin.value === ADMIN_PIN) {
+            Haptics.success();
+            UI.adminLogin.style.display = 'none';
+            UI.adminDash.style.display = 'block';
+            renderAdminStats();
+            showToast('Admin unlocked','success');
+        } else { Haptics.error(); UI.adminPin.value=''; showToast('Incorrect PIN', 'error'); }
+    }
+    function lockAdmin() {
+        Haptics.tap();
+        UI.adminDash.style.display='none';
+        UI.adminLogin.style.display='block';
+        UI.adminPin.value='';
+    }
+
+    function renderAdminStats() {
+        const now = new Date();
+        let today = 0;
+        const counts = {};
+        serverHistory.forEach(r=>{
+            const d = tryParseDate(r[0]);
+            if (d && isSameDay(d, now)) today++;
+            counts[r[1]] = (counts[r[1]]||0)+1;
+        });
+        let top = '–', topN = 0;
+        Object.entries(counts).forEach(([name,n])=>{ if (n>topN){topN=n; top=name;} });
+        document.getElementById('admToday').textContent = today;
+        document.getElementById('admProfiles').textContent = teacherList.length;
+        document.getElementById('admMostActive').textContent = top;
+    }
+
+    function filteredForExport() {
+        const selectedFilter = UI.filterSelect.value;
+        const from = document.getElementById('dateFrom').value ? new Date(document.getElementById('dateFrom').value) : null;
+        const to = document.getElementById('dateTo').value ? new Date(document.getElementById('dateTo').value) : null;
+        if (to) to.setHours(23,59,59,999);
+
+        return serverHistory.filter(row=>{
+            if (selectedFilter!=='ALL') {
+                const [tn, ts] = selectedFilter.split('|').map(s=>s.trim().toLowerCase());
+                if ((row[1]||'').toLowerCase()!==tn || (row[2]||'').toLowerCase()!==ts) return false;
+            }
+            if (from || to) {
+                const d = tryParseDate(row[0]);
+                if (!d) return false;
+                if (from && d < from) return false;
+                if (to && d > to) return false;
+            }
+            return true;
+        });
+    }
+
+    function generateModernPDF() {
+        Haptics.tap();
+        if (!serverHistory || serverHistory.length === 0) return showToast('No logs to export', 'error');
+        const filteredLogs = filteredForExport();
+        if (!filteredLogs.length) return showToast('No records match these filters', 'error');
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const logoImg = document.querySelector('.logo-img');
+        if (logoImg) { try { doc.addImage(logoImg, 'PNG', 14, 12, 18, 18); } catch(e){ console.warn(e); } }
+
+        doc.setTextColor(18,33,63);
+        doc.setFont("helvetica", "bold"); doc.setFontSize(18);
+        doc.text("ATTENDANCE REGISTER", 36, 20);
+        doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(100,100,100);
+        const filterText = UI.filterSelect.value === "ALL" ? "All Teachers" : UI.filterSelect.value;
+        doc.text(`Generated: ${new Date().toLocaleString()} | Filter: ${filterText}`, 36, 26);
+
+        const tableRows = filteredLogs.map((row, index) => [index + 1, row[0], row[1], row[2]]);
+        doc.autoTable({
+            startY: 38,
+            head: [['#', 'Date & Time', 'Teacher Name', 'Subject / Class']],
+            body: tableRows,
+            headStyles: { fillColor: [18,33,63], textColor: [255,255,255], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [248, 248, 248] },
+            styles: { font: 'helvetica', fontSize: 10, cellPadding: 4, textColor: [0, 0, 0], lineColor: [220,220,220], lineWidth: 0.1 },
+            margin: { left: 14, right: 14 }
+        });
+        doc.save(`Attendance_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+    }
+
+    function exportCSV() {
+        Haptics.tap();
+        const rows = filteredForExport();
+        if (!rows.length) return showToast('No records match these filters', 'error');
+        const header = ['Date & Time','Teacher Name','Subject / Class'];
+        const csv = [header, ...rows.map(r=>[r[0],r[1],r[2]])]
+            .map(row=>row.map(cell=>`"${(cell??'').toString().replace(/"/g,'""')}"`).join(','))
+            .join('\n');
+        const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `Attendance_Report_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click(); URL.revokeObjectURL(url);
+        showToast('CSV exported', 'success');
+    }
+
+    async function clearDatabase() {
+        if (!confirm('Permanently delete all logs?')) return;
+        if (!confirm('Final confirmation — this cannot be undone.')) return;
+        try {
+            const res = await fetchAPI('clearHistory');
+            if (res.success) { showToast('Database cleared', 'success'); await fetchLiveData(); }
+            else showToast('Error: '+res.message, 'error');
+        } catch { showToast('Network error', 'error'); }
+    }
+
+    /* ---------------- misc ---------------- */
+    function showToast(text, type) {
+        const icons = { success:'✓', error:'✕', info:'⏳' };
+        UI.toast.innerHTML = `<span>${icons[type]||''}</span><span>${text}</span>`;
+        UI.toast.className = `toast-${type}`;
+        UI.toast.style.display = 'flex';
+        clearTimeout(UI.toast._t);
+        UI.toast._t = setTimeout(()=>UI.toast.style.display='none', 3800);
+    }
+    function triggerConfetti() { if (typeof confetti!=='undefined') confetti({ particleCount:70, spread:60, origin:{y:0.7}, colors:['#12213F','#D64550','#F4A100'] }); }
+
+    function toggleTheme() {
+        Haptics.tap();
+        const d = document.body;
+        if (d.getAttribute('data-theme')==='dark') { d.removeAttribute('data-theme'); localStorage.setItem('theme','light'); document.getElementById('themeBtn').textContent='🌙'; }
+        else { d.setAttribute('data-theme','dark'); localStorage.setItem('theme','dark'); document.getElementById('themeBtn').textContent='☀️'; }
+    }
+
+    window.onload = async ()=>{
+        if (localStorage.getItem('theme')==='dark') { document.body.setAttribute('data-theme','dark'); document.getElementById('themeBtn').textContent='☀️'; }
+        updateQueueBadge();
+        if (navigator.onLine) { await fetchLiveData(); await flushQueue(); }
+        else setOffline();
+    };
+</script>
+</body>
+</html>
