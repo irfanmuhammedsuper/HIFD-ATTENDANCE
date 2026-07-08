@@ -83,8 +83,8 @@
         .logo-img { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; background: #fff; border: 2px solid rgba(255,255,255,0.25); }
         .brand-text h1 { font-family: var(--font-display); font-size: 1.02rem; font-weight: 700; letter-spacing: -0.01em; margin: 0; line-height: 1.25; color: #fff; }
         .brand-text .sub { font-family: var(--font-mono); font-size: 0.62rem; font-weight: 600; color: var(--amber); text-transform: uppercase; letter-spacing: 0.08em; }
-        .header-right { display:flex; align-items:center; gap:10px; z-index:1; }
-        .live-clock { font-family: var(--font-mono); font-size: 0.78rem; color: rgba(255,255,255,0.85); text-align:right; line-height:1.15; }
+        .header-right { display:flex; align-items:center; gap:8px; z-index:1; }
+        .live-clock { font-family: var(--font-mono); font-size: 0.78rem; color: rgba(255,255,255,0.85); text-align:right; line-height:1.15; margin-right: 4px; }
         .live-clock .d { font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.06em; }
         .icon-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 50%; width: 38px; height: 38px; cursor: pointer; color: #fff; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; }
         .icon-btn:active { transform: scale(0.92); }
@@ -92,7 +92,7 @@
         main { 
             flex: 1; 
             overflow-y: auto; 
-            padding: 16px 16px calc(100px + env(safe-area-inset-bottom)); 
+            padding: 16px 16px calc(20px + env(safe-area-inset-bottom)); 
             -webkit-overflow-scrolling: touch; 
         }
 
@@ -185,29 +185,89 @@
         .empty-state .e-title { font-weight:700; font-size:0.85rem; color:var(--text); font-family: var(--font-display); }
         .empty-state .e-sub { font-size:0.72rem; margin-top:4px; }
 
+        /* ---------- Hamburger Navigation Drawer (Mobile) ---------- */
+        .menu-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 1999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+        .menu-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
         .bottom-nav { 
             position: fixed; 
-            bottom: calc(14px + env(safe-area-inset-bottom)); 
-            left: 50%;
-            transform: translateX(-50%);
-            width: calc(100% - 32px);
-            max-width: 528px; 
-            background: var(--nav-bg); 
-            backdrop-filter: blur(16px); 
-            -webkit-backdrop-filter: blur(16px); 
-            border: 1px solid var(--border); 
-            border-radius: 34px; 
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 270px;
+            background: var(--card-bg); 
+            border-left: 1px solid var(--border); 
             display: flex; 
-            justify-content: space-around; 
-            padding: 6px 8px; 
-            z-index: 1000; 
-            box-shadow: 0 10px 26px -8px rgba(0,0,0,0.15); 
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: stretch;
+            padding: calc(20px + max(18px, env(safe-area-inset-top))) 18px 20px; 
+            gap: 12px;
+            z-index: 2000; 
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: -10px 0 32px rgba(0,0,0,0.12); 
         }
-        .nav-item { flex: 1; text-align: center; background: none; border: none; padding: 8px 4px; color: var(--text-muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; border-radius: 26px; }
-        .nav-item span { font-family: var(--font-mono); font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .bottom-nav.open {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding: 0 4px;
+        }
+        .drawer-header span {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text);
+        }
+        .close-drawer-btn {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-item { 
+            display: flex; 
+            flex-direction: row; 
+            align-items: center; 
+            gap: 14px; 
+            padding: 14px 16px; 
+            color: var(--text-muted); 
+            background: none; 
+            border: none; 
+            border-radius: var(--radius-md); 
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+        }
+        .nav-item span { font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
         .nav-item.active { color: var(--stamp); background: var(--stamp-glow); }
         .nav-item:focus-visible, .icon-btn:focus-visible, .btn:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--stamp); outline-offset: 2px; }
-        .nav-icon { font-size: 1.25rem; }
+        .nav-icon { font-size: 1.35rem; }
 
         #toast { margin-top: 12px; padding: 12px 15px; border-radius: var(--radius-md); font-size: 0.82rem; font-weight: 600; display: none; border: 1px solid transparent; align-items:center; gap:8px; }
         .toast-success { background: rgba(43,168,74,0.09); color: var(--success); border-color: var(--success); }
@@ -224,6 +284,9 @@
         .field-row { display:flex; gap:10px; }
         .field-row > div { flex:1; }
 
+        /* ========================================================
+           Desktop & Tablet Responsive Layout Modifications 
+           ======================================================== */
         @media (min-width: 768px) {
             body { 
                 display: flex; 
@@ -247,6 +310,9 @@
 
             #ptr { grid-column: 1 / -1; }
             header { grid-column: 1 / -1; border-radius: 0; }
+            #menuBtn { display: none; }
+            .menu-overlay { display: none; }
+            .drawer-header { display: none; }
 
             .bottom-nav {
                 position: static;
@@ -255,24 +321,16 @@
                 max-width: none;
                 grid-column: 1;
                 grid-row: 2;
-                flex-direction: column;
-                justify-content: flex-start;
-                border-radius: 0;
                 border: none;
                 border-right: 1px solid var(--border);
                 padding: 30px 16px;
                 gap: 16px;
-                background: var(--card-bg);
                 box-shadow: none;
                 backdrop-filter: none;
             }
 
             .nav-item {
-                flex: none;
                 padding: 14px;
-                flex-direction: row;
-                gap: 14px;
-                justify-content: flex-start;
                 border-radius: 12px;
             }
             .nav-item span { font-size: 0.85rem; }
@@ -301,6 +359,9 @@
     </style>
 </head>
 <body>
+<!-- Backdrop Blur Screen Overlay for Mobile Navigation Menu -->
+<div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+
 <div class="app-shell">
     <div id="ptr"><div class="ptr-spinner"></div><span>Syncing cloud…</span></div>
     <header>
@@ -314,6 +375,7 @@
         <div class="header-right">
             <div class="live-clock"><div id="clockTime">--:--:--</div><div class="d" id="clockDate">---</div></div>
             <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" aria-label="Toggle theme">🌙</button>
+            <button class="icon-btn" id="menuBtn" onclick="toggleMenu()" aria-label="Open navigation menu">☰</button>
         </div>
     </header>
 
@@ -417,7 +479,11 @@
         </section>
     </main>
 
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" id="bottomNav">
+        <div class="drawer-header">
+            <span>Navigation</span>
+            <button class="close-drawer-btn" onclick="toggleMenu()">✕</button>
+        </div>
         <button class="nav-item active" id="nav-record" onclick="switchTab('record')"><div class="nav-icon">🖋️</div><span>Record</span></button>
         <button class="nav-item" id="nav-history" onclick="switchTab('history')"><div class="nav-icon">📖</div><span>Ledger</span></button>
         <button class="nav-item" id="nav-admin" onclick="switchTab('admin')"><div class="nav-icon">⚙️</div><span>Admin</span></button>
@@ -430,7 +496,6 @@
     const QUEUE_KEY = 'attendance_offline_queue';
     const AVATAR_PALETTE = ['#D64550','#12213F','#2BA84A','#F4A100','#5C6BC0','#8D6E63','#26A69A','#7E57C2'];
 
-    // --- NEW: Local Teacher Database ---
     const LOCAL_TEACHERS = [
         { name: 'Irfan Hythami', subject: 'Hindi' },
         { name: 'Rauf Wafy', subject: 'Arabic' },
@@ -467,7 +532,9 @@
         stampBurst: document.getElementById('stampBurst'),
         punchBtnTime: document.getElementById('punchBtnTime'),
         chartCard: document.getElementById('chartCard'),
-        barChart: document.getElementById('barChart')
+        barChart: document.getElementById('barChart'),
+        bottomNav: document.getElementById('bottomNav'),
+        menuOverlay: document.getElementById('menuOverlay')
     };
 
     let serverHistory = [];
@@ -475,6 +542,33 @@
     let selectedTeacher = null;
 
     const Haptics = { tap: ()=>navigator.vibrate?.(10), success: ()=>navigator.vibrate?.([30,30,60]), error: ()=>navigator.vibrate?.([50,50,50]) };
+
+    /* ---------------- navigation drawer logic ---------------- */
+    function toggleMenu() {
+        Haptics.tap();
+        UI.bottomNav.classList.toggle('open');
+        UI.menuOverlay.classList.toggle('open');
+    }
+
+    function closeMenu() {
+        UI.bottomNav.classList.remove('open');
+        UI.menuOverlay.classList.remove('open');
+    }
+
+    function switchTab(tab) {
+        Haptics.tap();
+        document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+        document.getElementById(`nav-${tab}`).classList.add('active');
+        document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+        document.getElementById(`view-${tab}`).classList.add('active');
+        UI.main.scrollTop = 0;
+        if (tab==='history') renderHistory();
+        
+        // Auto-collapse sidebar view panel menu list on mobile execution selection
+        if (window.innerWidth < 768) {
+            closeMenu();
+        }
+    }
 
     /* ---------------- utility ---------------- */
     function hashColor(str) {
@@ -494,17 +588,6 @@
         const y = new Date(now); y.setDate(now.getDate()-1);
         if (isSameDay(d, y)) return 'Yesterday';
         return d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
-    }
-
-    /* ---------------- nav ---------------- */
-    function switchTab(tab) {
-        Haptics.tap();
-        document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
-        document.getElementById(`nav-${tab}`).classList.add('active');
-        document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
-        document.getElementById(`view-${tab}`).classList.add('active');
-        UI.main.scrollTop = 0;
-        if (tab==='history') renderHistory();
     }
 
     /* ---------------- pull to refresh ---------------- */
@@ -560,13 +643,11 @@
             UI.netDot.className = 'dot dot-sync';
             UI.netText.textContent = 'SYNCING';
             
-            // Allow fetchAPI for getTeachers to fail silently so we can still rely on our LOCAL_TEACHERS
             const [apiTeachers, history] = await Promise.all([
                 fetchAPI('getTeachers').catch(() => []), 
                 fetchAPI('getHistory')
             ]);
             
-            // Merge LOCAL_TEACHERS with any dynamic ones from Google Sheets
             const combined = [...LOCAL_TEACHERS, ...(Array.isArray(apiTeachers) ? apiTeachers : [])];
             const uniqueMap = new Map();
             combined.forEach(t => uniqueMap.set(`${t.name} | ${t.subject}`, t));
@@ -602,7 +683,6 @@
         UI.netDot.className = 'dot dot-offline';
         UI.netText.textContent = 'OFFLINE';
         
-        // Ensure local teachers are always available even when completely offline
         teacherList = LOCAL_TEACHERS;
         UI.datalist.innerHTML = '';
         teacherList.forEach(t=>{
@@ -663,7 +743,6 @@
     });
 
     function updatePunchState() {
-        // Updated offline check: you can always punch if a teacher is selected
         UI.btn.disabled = !selectedTeacher;
     }
 
