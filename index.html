@@ -89,6 +89,26 @@ select{width:100%;max-width:100%;min-width:0;min-height:48px;padding:10px 12px;b
 .rec p{margin:3px 0}
 .rec .btn{width:100%;margin-top:10px;min-height:44px;font-size:15px;text-decoration:none}
 
+[hidden]{display:none !important}
+.period-card{border:1.5px solid var(--gold);background:var(--goldbg);border-radius:16px;padding:clamp(14px,2.5vw,22px);text-align:center;margin-bottom:14px}
+.pc-title{font-weight:800;letter-spacing:.14em;text-transform:uppercase;font-size:.85em;color:var(--gold-d);margin-bottom:10px}
+.pc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,120px),1fr));gap:10px;margin:0 0 12px;text-align:left}
+.pc-grid dt{font-size:.8em;color:var(--mute)}
+.pc-grid dd{margin:0;font-weight:700;color:var(--g9);overflow-wrap:anywhere}
+.pc-time{font-weight:700;color:var(--g9);font-size:clamp(15px,2.4vw,18px)}
+.pc-remain{font-size:clamp(28px,7vw,42px);font-weight:800;color:var(--g7);font-variant-numeric:tabular-nums;line-height:1.1;margin-top:8px}
+.pc-remlbl{font-size:.8em;letter-spacing:.12em;color:var(--mute);margin-bottom:12px}
+.pc-msg{margin:6px 0 12px;font-weight:700;color:var(--g9);font-size:clamp(15px,2.4vw,18px)}
+.pc-sub{margin:0 0 12px;color:var(--mute);font-size:.92em}
+.pc-badge{display:inline-block;margin:0 0 12px;padding:6px 12px;border-radius:999px;background:var(--g1);color:var(--g9);font-weight:700;font-size:.9em}
+.period-card .mark-button{width:min(100%,360px);margin-inline:auto}
+.period-card select{margin-bottom:12px;text-align:left}
+.sched{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.sched li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.sched .sp{font-weight:800;color:var(--g9)}
+.sched .st{color:var(--mute);font-size:.9em;flex:1 1 140px}
+.chip{padding:3px 10px;border-radius:999px;font-size:.78em;font-weight:700;background:var(--g1);color:var(--g9);margin-left:auto}
+.chip.active{background:var(--gold);color:#3a2e0c}.chip.ended{background:#eef0f2;color:var(--mute)}.chip.marked{background:#dff1e8;color:#1f6b49}
 .footer{margin-top:var(--gap);text-align:center;color:var(--mute);font-size:.85em}
 @media(max-height:480px) and (orientation:landscape){.card{padding:12px}.header{margin-bottom:8px}}
 @media(prefers-reduced-motion:reduce){.spin{animation-duration:2s}}
@@ -117,23 +137,24 @@ html,body{max-width:100vw;overflow-x:hidden !important}
           <label for="teacher">Teacher</label>
           <select id="teacher" disabled><option>Loading teachers…</option></select>
         </div>
-        <div class="field">
-          <label for="period">Period</label>
-          <select id="period" disabled><option value="">Select a teacher first</option></select>
+        <div class="period-card" aria-live="polite">
+          <div class="pc-title">Current period</div>
+          <div id="periodBody"><p class="pc-msg">Select your name to see your current period.</p></div>
+          <div id="multiWrap" hidden><label for="periodSel">Choose active period</label><select id="periodSel"></select></div>
+          <button class="mark-button" id="markBtn" type="button" disabled>MARK ATTENDANCE</button>
         </div>
-        <div class="field">
-          <span class="lbl" id="subLbl">Subject</span>
-          <div class="box sub" id="subject" aria-labelledby="subLbl"><span>Select your period to see the subject.</span></div>
-        </div>
-        <button class="mark-button" id="markBtn" type="button" disabled>MARK ATTENDANCE</button>
         <div class="status-grid">
           <div class="stat" id="attBox"><small>Attendance</small><b id="attStat">Not marked</b></div>
           <div class="stat" id="locBox"><small>📍 Location</small><b id="locStat">Ready</b></div>
         </div>
         <div class="alert" id="alert" role="status" aria-live="polite"></div>
-        <p class="note">Choose the period you taught today, then press the button. Open 07:45 AM – 01:00 PM IST; each period can be marked once per day. Location is requested only when you press the button and is used only to find the place where attendance was marked. The place name and coordinates are saved with your record. Location needs a secure (HTTPS) page and your permission.</p>
+        <p class="note">Attendance can be marked only while your period is running.</p>
       </section>
 
+      <section class="card" aria-labelledby="hSched">
+        <h2 id="hSched">Today's schedule</h2>
+        <ul class="sched" id="schedule"><li><span class="st">Select your name to see today's periods.</span></li></ul>
+      </section>
     </div>
 
     <section class="card" aria-labelledby="hHist">
@@ -164,10 +185,13 @@ const LOGO_FALLBACK_URL = 'https://i.postimg.cc/52xLJ6y8/ansar-logo.jpg';
 
 const $ = id => document.getElementById(id);
 const els = {
-  teacher: $('teacher'), period: $('period'), subject: $('subject'), mark: $('markBtn'), alert: $('alert'),
+  teacher: $('teacher'), mark: $('markBtn'), alert: $('alert'), body: $('periodBody'),
+  multi: $('multiWrap'), sel: $('periodSel'), sched: $('schedule'),
   refresh: $('refreshBtn'), table: $('historyTable'), cards: $('historyCards')
 };
-let teachers = [], periods = [], busy = false, resetTimer = null, periodReq = 0;
+// Period data always comes from the server (the Teachers sheet) - nothing is hardcoded here.
+let state = { active: [], schedule: [], day: '', serverSec: 0, t0: 0, chosen: '', loaded: false, fetching: false };
+let teachers = [], busy = false, resetTimer = null, periodReq = 0, flashUntil = 0;
 
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -184,9 +208,9 @@ function setStat(prefix, type, text) { $(prefix + 'Box').className = 'stat' + (t
 function setMark(state, label) {
   clearTimeout(resetTimer);
   els.mark.className = 'mark-button' + (state === 'success' || state === 'error' ? ' ' + state : '');
-  els.mark.disabled = state === 'loading' || !els.teacher.value || !els.period.value;
+  els.mark.disabled = state === 'loading' || !canMark(true);
   els.mark.innerHTML = (state === 'loading' ? '<span class="spin"></span>' : '') + esc(label);
-  if (state === 'success' || state === 'error') resetTimer = setTimeout(() => setMark('idle', 'MARK ATTENDANCE'), 3000);
+  if (state === 'success' || state === 'error') { flashUntil = Date.now() + 3000; resetTimer = setTimeout(render, 3000); }
 }
 
 async function api(action, payload) {
@@ -208,57 +232,119 @@ async function loadTeachers() {
   try {
     const r = await api('getTeachers');
     teachers = Array.isArray(r.data) ? r.data : [];
-    if (!teachers.length) { els.teacher.innerHTML = '<option value="">No teachers found</option>'; showAlert('err', 'No teachers are listed in the Teachers sheet.'); return; }
+    if (!teachers.length) { els.teacher.innerHTML = '<option value="">No teachers found</option>'; showAlert('err', 'No teachers found. Add timetable rows to the Teachers sheet.'); return; }
     els.teacher.innerHTML = '<option value="">Select your name</option>' + teachers.map(t => '<option value="' + esc(t.name) + '">' + esc(t.name) + '</option>').join('');
     els.teacher.disabled = false;
   } catch (e) { els.teacher.innerHTML = '<option value="">Could not load teachers</option>'; showAlert('err', e.message); }
 }
-function setSubject(main, sub) {
-  els.subject.innerHTML = '<span>' + esc(main) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span>';
+const fmt12 = min => {
+  const hr = Math.floor(min / 60), m = min % 60;
+  return String(hr % 12 === 0 ? 12 : hr % 12).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ' ' + (hr < 12 ? 'AM' : 'PM');
+};
+const range12 = p => fmt12(p.startMin) + ' — ' + fmt12(p.endMin);
+const curPeriod = () => state.active.find(p => p.periodId === state.chosen) || state.active[0] || null;
+function canMark(ignoreBusy) {
+  const p = curPeriod();
+  return !!(els.teacher.value && p && !p.marked && (ignoreBusy || !busy));
 }
-const timeRange = p => [p.startTime, p.endTime].filter(Boolean).join(' – ');
-const canMark = () => !!(els.teacher.value && els.period.value) && !busy;
+function remainingSec(p) {
+  return p.endMin * 60 - (state.serverSec + (performance.now() - state.t0) / 1000);
+}
+function fmtRemain(sec) {
+  sec = Math.max(0, Math.floor(sec));
+  return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+}
 
-els.teacher.addEventListener('change', async () => {
-  const name = els.teacher.value, req = ++periodReq;
-  periods = [];
-  setStat('att', '', 'Not marked');
-  els.period.disabled = true;
-  els.mark.disabled = true;
-  if (!name) {
-    els.period.innerHTML = '<option value="">Select a teacher first</option>';
-    setSubject('Select your period to see the subject.');
-    return;
+function render() {
+  const name = els.teacher.value;
+  const p = curPeriod();
+  els.multi.hidden = state.active.length < 2;
+  if (state.active.length > 1) {
+    els.sel.innerHTML = state.active.map(x => '<option value="' + esc(x.periodId) + '"' + (p && x.periodId === p.periodId ? ' selected' : '') + '>' +
+      esc('Period ' + x.periodId + ' · ' + x.subject + ' · ' + range12(x)) + '</option>').join('');
   }
-  els.period.innerHTML = '<option value="">Loading periods…</option>';
-  setSubject('Loading periods…');
-  try {
-    const r = await api('getPeriods', { teacherName: name });
-    if (req !== periodReq) return; // a newer selection superseded this one
-    periods = Array.isArray(r.data) ? r.data : [];
-    if (!periods.length) {
-      els.period.innerHTML = '<option value="">No periods today</option>';
-      setSubject('No period scheduled for ' + (r.day || 'today') + '.', r.hint || 'Ask the admin to add it to the Timetable sheet.');
-      return;
+  if (!name) {
+    els.body.innerHTML = '<p class="pc-msg">Select your name to see your current period.</p>';
+  } else if (!state.loaded) {
+    els.body.innerHTML = '<p class="pc-msg"><span class="spin dark"></span> Loading your period…</p>';
+  } else if (p) {
+    els.body.innerHTML =
+      '<dl class="pc-grid"><div><dt>Teacher</dt><dd>' + esc(p.teacher) + '</dd></div><div><dt>Period</dt><dd>' + esc(p.periodId) +
+      '</dd></div><div><dt>Subject</dt><dd>' + esc(p.subject) + '</dd></div></dl>' +
+      '<div class="pc-time">' + esc(range12(p)) + '</div>' +
+      (p.marked ? '<div class="pc-badge" style="margin-top:10px">✅ Attendance already recorded</div>'
+        : '<div class="pc-remain" id="remain">' + fmtRemain(remainingSec(p)) + '</div><div class="pc-remlbl">REMAINING</div>');
+  } else {
+    const upcoming = state.schedule.find(x => x.status === 'upcoming');
+    const ended = state.schedule.some(x => x.status === 'ended');
+    if (!state.schedule.length) {
+      els.body.innerHTML = '<p class="pc-msg">No active period right now.</p><p class="pc-sub">No periods are scheduled for ' + esc(state.day || 'today') + '.</p>';
+    } else if (!upcoming && ended) {
+      els.body.innerHTML = '<p class="pc-msg">This period has ended.</p><p class="pc-sub">No more periods today.</p>';
+    } else {
+      els.body.innerHTML = '<p class="pc-msg">No active period right now.</p>' +
+        (upcoming ? '<p class="pc-sub">Next: ' + esc('Period ' + upcoming.periodId + ' · ' + upcoming.subject + ' at ' + fmt12(upcoming.startMin)) + '</p>' : '');
     }
-    els.period.innerHTML = '<option value="">Select period (' + esc(r.day || 'today') + ')</option>' + periods.map(p =>
-      '<option value="' + esc(p.periodId) + '">' + esc('Period ' + p.periodId + (timeRange(p) ? ' · ' + timeRange(p) : '') + ' · ' + p.subject) + '</option>').join('');
-    els.period.disabled = false;
-    setSubject('Select your period to see the subject.');
+  }
+  renderSchedule();
+  if (!busy && Date.now() >= flashUntil) setMark('idle', p && p.marked ? 'ALREADY MARKED' : 'MARK ATTENDANCE');
+}
+
+function renderSchedule() {
+  if (!els.teacher.value) { els.sched.innerHTML = '<li><span class="st">Select your name to see today\'s periods.</span></li>'; return; }
+  if (!state.loaded) { els.sched.innerHTML = '<li><span class="st">Loading…</span></li>'; return; }
+  if (!state.schedule.length) { els.sched.innerHTML = '<li><span class="st">No periods scheduled for ' + esc(state.day || 'today') + '.</span></li>'; return; }
+  els.sched.innerHTML = state.schedule.map(x => {
+    const chip = x.marked ? '<span class="chip marked">Marked</span>'
+      : x.status === 'active' ? '<span class="chip active">Active</span>'
+      : x.status === 'ended' ? '<span class="chip ended">Ended</span>' : '<span class="chip">Upcoming</span>';
+    return '<li><span class="sp">' + esc(x.periodId) + '</span><span class="st">' + esc(x.subject) + '<br>' + esc(range12(x)) + '</span>' + chip + '</li>';
+  }).join('');
+}
+
+async function fetchPeriods() {
+  const name = els.teacher.value, req = ++periodReq;
+  if (!name) { state = { active: [], schedule: [], day: '', serverSec: 0, t0: 0, chosen: '', loaded: false, fetching: false }; render(); return; }
+  state.fetching = true;
+  try {
+    const r = await api('getCurrentPeriods', { teacherName: name });
+    if (req !== periodReq) return; // a newer request superseded this one
+    state.schedule = Array.isArray(r.schedule) ? r.schedule : [];
+    state.active = state.schedule.filter(x => x.status === 'active');
+    state.day = r.day || '';
+    state.serverSec = Number(r.serverSeconds) || 0;
+    state.t0 = performance.now();
+    if (!state.active.some(x => x.periodId === state.chosen)) state.chosen = state.active[0] ? state.active[0].periodId : '';
+    state.loaded = true;
   } catch (e) {
     if (req !== periodReq) return;
-    els.period.innerHTML = '<option value="">Could not load periods</option>';
-    setSubject('Could not load periods.');
-    showAlert('err', e.message);
+    state.loaded = true; state.active = []; state.schedule = [];
+    els.body.innerHTML = '<p class="pc-msg">Could not load your period.</p><p class="pc-sub">' + esc(e.message) + '</p>';
+    state.fetching = false;
+    return;
   }
-});
-els.period.addEventListener('change', () => {
-  const p = periods.find(x => x.periodId === els.period.value);
-  if (p) setSubject(p.subject || '—', timeRange(p));
-  else setSubject('Select your period to see the subject.');
-  els.mark.disabled = !canMark();
+  state.fetching = false;
+  render();
+}
+els.teacher.addEventListener('change', () => {
+  state.loaded = false; state.active = []; state.schedule = []; state.chosen = '';
   setStat('att', '', 'Not marked');
+  render();
+  fetchPeriods();
 });
+els.sel.addEventListener('change', () => { state.chosen = els.sel.value; render(); });
+
+// live countdown; when the period ends, ask the server for the new state
+setInterval(() => {
+  const p = curPeriod();
+  const el = $('remain');
+  if (!p || !el || p.marked) return;
+  const rem = remainingSec(p);
+  el.textContent = fmtRemain(rem);
+  if (rem <= 0 && !state.fetching && !busy) fetchPeriods();
+}, 1000);
+// re-sync with the server every minute
+setInterval(() => { if (!busy && !state.fetching && els.teacher.value && !document.hidden) fetchPeriods(); }, 60000);
 
 const periodText = x => x.periodId ? esc(x.periodId) + (x.startTime || x.endTime ? '<br><small>' + esc([x.startTime, x.endTime].filter(Boolean).join(' – ')) + '</small>' : '') : '—';
 
@@ -306,12 +392,12 @@ function getLocation() {
 
 els.mark.addEventListener('click', async () => {
   const name = els.teacher.value;
-  const t = teachers.find(x => x.name === name);
-  if (!t) { showAlert('err', 'Select your name first.'); return; }
-  const p = periods.find(x => x.periodId === els.period.value);
-  if (!p) { showAlert('err', 'Select your period first.'); return; }
+  if (!name) { showAlert('err', 'Select your name first.'); return; }
+  const p = curPeriod();
+  if (!p) { showAlert('err', 'No active period right now.'); return; }
+  if (p.marked) { showAlert('err', 'Attendance is already recorded for this period.'); return; }
   if (busy) return;
-  busy = true; els.teacher.disabled = true; els.period.disabled = true; els.refresh.disabled = true;
+  busy = true; els.teacher.disabled = true; els.sel.disabled = true; els.refresh.disabled = true;
   els.alert.className = 'alert';
   setStat('loc', '', 'Requesting…');
   setMark('loading', '📍 Getting Location...');
@@ -329,19 +415,23 @@ els.mark.addEventListener('click', async () => {
   await new Promise(r => setTimeout(r, 700)); // let the teacher see the coordinates
 
   try {
-    const r = await api('recordAttendance', { teacherName: name, subject: p.subject, periodId: p.periodId, latitude: lat, longitude: lng, accuracy: acc, locationStatus: 'Location captured' });
+    const r = await api('recordAttendance', { teacherName: name, periodId: p.periodId, latitude: lat, longitude: lng, accuracy: acc, locationStatus: 'Location captured' });
     setStat('att', 'ok', 'Marked · Period ' + p.periodId);
     showAlert('ok', '✅ ' + (r.message || 'Attendance recorded.'));
+    p.marked = true;
     finish('success', '✅ Recorded');
+    render();
+    fetchPeriods();
     loadHistory();
   } catch (e) {
     setStat('att', 'err', 'Not recorded');
     showAlert('err', '❌ ' + e.message);
     finish('error', 'Not recorded');
+    fetchPeriods(); // the period may have ended or been marked elsewhere
   }
 });
 function finish(state, label) {
-  busy = false; els.teacher.disabled = false; els.period.disabled = !periods.length; els.refresh.disabled = false;
+  busy = false; els.teacher.disabled = false; els.sel.disabled = false; els.refresh.disabled = false;
   setMark(state, label);
 }
 els.refresh.addEventListener('click', loadHistory);
